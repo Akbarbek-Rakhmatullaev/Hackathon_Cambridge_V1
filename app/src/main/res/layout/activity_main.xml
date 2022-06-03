@@ -6,35 +6,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".Presentation.MainActivity">
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/main_fragment_toolbar_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/main_fragment_toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            style="@style/Widget.MaterialComponents.Toolbar.Primary"/>
-    </com.google.android.material.appbar.AppBarLayout>
 
-    <RelativeLayout
+    <fragment
+        android:id="@+id/main_activity_fragment_host"
+        android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/main_fragment_toolbar_layout">
-        <com.yandex.mapkit.mapview.MapView
-            android:id="@+id/main_fragment_mapView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-    </RelativeLayout>
-
-<!--    <fragment-->
-<!--        android:id="@+id/main_activity_fragment_host"-->
-<!--        android:name="androidx.navigation.fragment.NavHostFragment"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="match_parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:navGraph="@navigation/main_navigation" />-->
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navGraph="@navigation/main_navigation" />
 </RelativeLayout>

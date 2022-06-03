@@ -17,16 +17,10 @@ import com.yandex.mapkit.mapview.MapView
 class MainActivity : AppCompatActivity()
 {
     private val mainViewModel: MainViewModel by viewModels()
-    private lateinit var toolbarLayout: AppBarLayout
-    private lateinit var toolbar: MaterialToolbar
-    private lateinit var mapView: MapView
 
     override fun onCreate(savedInstanceState: Bundle?)
     {
         super.onCreate(savedInstanceState)
-
-        MapKitFactory.setApiKey(BuildConfig.MAP_KIT_API)
-        MapKitFactory.initialize(this)
 
         setContentView(R.layout.activity_main)
         initialization()
@@ -35,24 +29,6 @@ class MainActivity : AppCompatActivity()
     fun initialization()
     {
 
-        mapView = findViewById(R.id.main_fragment_mapView)
-        mapView.map.move(
-            CameraPosition(Point(5.751574, 37.573856), 11.0f, 0.0f, 0.0f),
-            Animation(Animation.Type.SMOOTH, 0f), null)
-    }
 
-    override fun onStop()
-    {
-        mapView.onStop()
-        MapKitFactory.getInstance().onStop()
-        super.onStop()
     }
-
-    override fun onStart()
-    {
-        super.onStart()
-        MapKitFactory.getInstance().onStart()
-        mapView.onStart()
-    }
-
 }

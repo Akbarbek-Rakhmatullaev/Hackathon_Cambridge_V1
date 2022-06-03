@@ -5,5 +5,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/main_fragment_toolbar_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/main_fragment_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/Widget.MaterialComponents.Toolbar.Primary"/>
+    </com.google.android.material.appbar.AppBarLayout>
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/main_fragment_toolbar_layout">
+        <com.yandex.mapkit.mapview.MapView
+            android:id="@+id/main_fragment_mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+    </RelativeLayout>
 </RelativeLayout>
