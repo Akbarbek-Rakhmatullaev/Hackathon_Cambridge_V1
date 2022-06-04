@@ -128,6 +128,7 @@ class MainFragment: Fragment(), UserLocationObjectListener
                     Animation(Animation.Type.SMOOTH,0f),
                     null)
                 mapKitEnabled = true
+                checkerLayout.visibility = View.GONE
                 Log.d("MyLog","Once Updated")
             }
 
