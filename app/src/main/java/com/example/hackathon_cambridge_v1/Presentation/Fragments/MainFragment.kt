@@ -85,6 +85,7 @@ class MainFragment: Fragment(), UserLocationObjectListener
         positionButton = view.findViewById(R.id.main_fragment_position_button)
         toolbarLayout = view.findViewById(R.id.main_fragment_toolbar_layout)
         toolbar = view.findViewById(R.id.main_fragment_toolbar)
+        toolbarLayout.visibility = View.GONE
         checkerLayout = view.findViewById(R.id.main_fragment_checker_layout)
         mapView = view.findViewById(R.id.main_fragment_mapView)
         val map = mapView.map
@@ -129,6 +130,7 @@ class MainFragment: Fragment(), UserLocationObjectListener
                     null)
                 mapKitEnabled = true
                 checkerLayout.visibility = View.GONE
+                toolbarLayout.visibility = View.VISIBLE
                 Log.d("MyLog","Once Updated")
             }
 
