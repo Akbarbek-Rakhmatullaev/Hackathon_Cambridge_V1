@@ -11,4 +11,5 @@
     <color name="white">#FFFFFFFF</color>
     <color name="primary_grey">#353849</color>
     <color name="primary_green">#03CC90</color>
+    <color name="semi_primary_grey">#4D353849</color>
 </resources>

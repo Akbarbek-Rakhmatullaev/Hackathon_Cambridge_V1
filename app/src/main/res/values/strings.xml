@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">Hackathon_Cambridge_V1</string>
     <string name="project_name">Easy\nCharge</string>
+
+    //Driving Strings
+    <string name="unknown_error_message">Unknown Error</string>
+    <string name="remote_error_message">Remote Error</string>
+    <string name="network_error_message">Network Error</string>
+
+    //Main Strings
+    <string name="search">Search</string>
 </resources>

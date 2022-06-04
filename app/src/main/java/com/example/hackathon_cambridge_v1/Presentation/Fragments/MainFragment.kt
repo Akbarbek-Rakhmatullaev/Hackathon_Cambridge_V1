@@ -1,53 +1,67 @@
 package com.example.hackathon_cambridge_v1.Presentation.Fragments
 
-import android.Manifest
-import android.graphics.Color
-import android.graphics.PointF
-import android.opengl.Visibility
+import android.content.Context
+import android.graphics.*
+import android.graphics.Paint.Align
 import android.os.Bundle
+import android.util.DisplayMetrics
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.RelativeLayout
-import android.widget.Toast
+import android.view.*
+import android.view.inputmethod.EditorInfo
+import android.widget.*
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
+import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
-import androidx.lifecycle.lifecycleScope
 import com.example.hackathon_cambridge_v1.BuildConfig
 import com.example.hackathon_cambridge_v1.Presentation.MainViewModel
 import com.example.hackathon_cambridge_v1.R
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
-import com.gun0912.tedpermission.PermissionListener
-import com.gun0912.tedpermission.normal.TedPermission
-import com.yandex.mapkit.Animation
-import com.yandex.mapkit.MapKit
-import com.yandex.mapkit.MapKitFactory
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.yandex.mapkit.*
+import com.yandex.mapkit.directions.DirectionsFactory
+import com.yandex.mapkit.directions.driving.*
 import com.yandex.mapkit.geometry.Point
+import com.yandex.mapkit.layers.GeoObjectTapEvent
+import com.yandex.mapkit.layers.GeoObjectTapListener
 import com.yandex.mapkit.layers.ObjectEvent
 import com.yandex.mapkit.location.*
 import com.yandex.mapkit.map.*
+import com.yandex.mapkit.map.Map
 import com.yandex.mapkit.mapview.MapView
+import com.yandex.mapkit.search.*
+import com.yandex.mapkit.search.search_layer.PlacemarkListener
+import com.yandex.mapkit.search.search_layer.SearchResultItem
 import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.mapkit.user_location.UserLocationObjectListener
 import com.yandex.mapkit.user_location.UserLocationView
+import com.yandex.runtime.Error
 import com.yandex.runtime.image.ImageProvider
-import kotlinx.coroutines.launch
+import com.yandex.runtime.network.NetworkError
+import com.yandex.runtime.network.RemoteError
+import kotlin.math.abs
+import kotlin.math.sqrt
+import kotlin.random.Random
 
 
-class MainFragment: Fragment(), UserLocationObjectListener
+class MainFragment: Fragment(), UserLocationObjectListener, DrivingSession.DrivingRouteListener,
+        GeoObjectTapListener, InputListener, Session.SearchListener, ClusterListener, ClusterTapListener,
+        MapObjectTapListener
 {
+    //base view and vars
     private val mainViewModel: MainViewModel by activityViewModels()
     private lateinit var toolbarLayout: AppBarLayout
     private lateinit var toolbar: MaterialToolbar
     private lateinit var positionButton: Button
+    private lateinit var searchEditText: EditText
     private lateinit var checkerLayout: RelativeLayout
+    private lateinit var sheetHolder: CoordinatorLayout
+    private lateinit var sheet: RelativeLayout
     private lateinit var mapView: MapView
     private lateinit var mapKit: MapKit
     private var mapKitEnabled: Boolean = false
@@ -59,12 +73,33 @@ class MainFragment: Fragment(), UserLocationObjectListener
     private lateinit var locationManager: LocationManager
     private lateinit var locationListener: LocationListener
 
+    //routing, searching and navigation views and vars
+    private lateinit var mapObjects: MapObjectCollection
+    private lateinit var drivingRouter: DrivingRouter
+    private lateinit var drivingSession: DrivingSession
+
+    private lateinit var searchManager: SearchManager
+    private lateinit var searchSession: Session
+
+    //adding clustered points
+    private val MARKS_NUMBER: Int = 50
+    private val clusters: List<Point> = listOf(Point(41.311081, 69.240562),
+        Point(41.240562, 69.1),
+        Point(41.3, 69.2),
+        Point(41.2, 69.5),
+        Point(41.1, 69.7))
+
+    //adding points
+    private lateinit var mapObjectTapListener: MapObjectTapListener
+
     override fun onCreate(savedInstanceState: Bundle?)
     {
         super.onCreate(savedInstanceState)
 
         MapKitFactory.setApiKey(BuildConfig.MAP_KIT_API)
         MapKitFactory.initialize(activity)
+        DirectionsFactory.initialize(activity)
+        SearchFactory.initialize(activity)
         Log.d("MyLog","MAP KIT FACTORY")
     }
 
@@ -82,11 +117,19 @@ class MainFragment: Fragment(), UserLocationObjectListener
 
     private fun initialization(view: View)
     {
+        //base view and vars
         positionButton = view.findViewById(R.id.main_fragment_position_button)
-        toolbarLayout = view.findViewById(R.id.main_fragment_toolbar_layout)
-        toolbar = view.findViewById(R.id.main_fragment_toolbar)
-        toolbarLayout.visibility = View.GONE
+        searchEditText = view.findViewById(R.id.fragment_main_search_editText)
+//        toolbarLayout = view.findViewById(R.id.main_fragment_toolbar_layout)
+//        toolbar = view.findViewById(R.id.main_fragment_toolbar)
+//        toolbarLayout.visibility = View.GONE
         checkerLayout = view.findViewById(R.id.main_fragment_checker_layout)
+        sheetHolder = view.findViewById(R.id.main_fragment_sheet_holder)
+        sheet = view.findViewById(R.id.main_fragment_sheet)
+        BottomSheetBehavior.from(sheet).apply {
+            this.state = BottomSheetBehavior.STATE_HIDDEN
+        }
+        sheetHolder.visibility = View.GONE
         mapView = view.findViewById(R.id.main_fragment_mapView)
         val map = mapView.map
         map.isRotateGesturesEnabled = false
@@ -130,7 +173,8 @@ class MainFragment: Fragment(), UserLocationObjectListener
                     null)
                 mapKitEnabled = true
                 checkerLayout.visibility = View.GONE
-                toolbarLayout.visibility = View.VISIBLE
+                //toolbarLayout.visibility = View.VISIBLE
+                mainViewModel.getCameraPosition(userLocationLayer)
                 Log.d("MyLog","Once Updated")
             }
 
@@ -143,9 +187,60 @@ class MainFragment: Fragment(), UserLocationObjectListener
         locationManager.requestSingleUpdate(locationListener)
 
         Log.d("MyLog","MAP KIT ENABLED")
-        Log.d("MyLog","CAMERA ")
+
+        //routing, searching and navigation views and vars
+        //-ROUTING
+        drivingRouter = DirectionsFactory.getInstance().createDrivingRouter()
+        mapObjects = map.mapObjects.addCollection()
+        submitRequest()
+        //-CLICKING
+
+        map.addTapListener(this)
+        map.addInputListener(this)
+        //-SEARCHING
+        searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
+        searchEditText.setOnEditorActionListener(object: TextView.OnEditorActionListener
+        {
+            override fun onEditorAction(v: TextView?,actionId: Int,event: KeyEvent?): Boolean
+            {
+                if(actionId == EditorInfo.IME_ACTION_SEARCH)
+                {
+                    //submitQuery(searchEditText.text.toString())
+                    Log.d("MyLog","SEARCH IS SENT")
+                }
+                return false
+            }
+
+        })
+        //submitQuery("Novza")
+        //adding clustered points
+//        val imageProvider = ImageProvider.fromResource(activity, R.drawable.ic_search_result)
+//        val clusterizedCollection: ClusterizedPlacemarkCollection = map.mapObjects.addClusterizedPlacemarkCollection(this)
+//        val points: List<Point> = createPoints(clusters.size)
+//        clusterizedCollection.addPlacemarks(points, imageProvider, IconStyle())
+//        clusterizedCollection.clusterPlacemarks(60.0, 12)
+
+        //adding points
+        mapObjectTapListener = MapObjectTapListener { mapObject, point ->
+            Log.d("MyLog","Map Object: ${mapObject.userData}")
+            BottomSheetBehavior.from(sheet).apply {
+                peekHeight = 200
+                this.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+            }
+            sheetHolder.visibility = View.VISIBLE
+            true }
+
+        for(i in clusters.indices)
+        {
+            val placemark: PlacemarkMapObject = mapObjects.addPlacemark(clusters[i],
+                ImageProvider.fromBitmap(drawBitMap(requireContext())))
+            placemark.apply {
+                userData = "123"
+                addTapListener(mapObjectTapListener) }
+        }
     }
 
+    //base view and vars
     override fun onStop()
     {
         mapView.onStop()
@@ -184,5 +279,211 @@ class MainFragment: Fragment(), UserLocationObjectListener
 
     override fun onObjectUpdated(p0: UserLocationView,p1: ObjectEvent)
     {}
+
+    //routing, searching and navigation views and vars
+    //-ROUTING
+    override fun onDrivingRoutes(p0: MutableList<DrivingRoute>)
+    {
+        for(route in p0)
+        {
+            mapObjects.addPolyline(route.geometry)
+        }
+    }
+
+    override fun onDrivingRoutesError(p0: Error)
+    {
+        var errorMessage: String = getString(R.string.unknown_error_message)
+        if(p0 is RemoteError)
+        {
+            errorMessage = getString(R.string.remote_error_message)
+        }
+        else if (p0 is NetworkError)
+        {
+            errorMessage = getString(R.string.network_error_message)
+        }
+        Toast.makeText(activity, errorMessage, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun submitRequest()
+    {
+        mainViewModel.cameraPositionLiveData.observe(viewLifecycleOwner, Observer {
+            val cameraPosition = it
+            if(cameraPosition != null)
+            {
+                val routeStartPoint: Point = Point(cameraPosition.target.latitude, cameraPosition.target.longitude)
+                val routeEndPoint: Point = Point(41.7, 69.8)
+                val drivingOptions = DrivingOptions()
+                val vehicleOptions = VehicleOptions()
+                val requestPoints: ArrayList <RequestPoint> = ArrayList()
+                requestPoints.add(RequestPoint(routeStartPoint, RequestPointType.WAYPOINT, null))
+                requestPoints.add(RequestPoint(routeEndPoint, RequestPointType.WAYPOINT, null))
+                drivingSession = drivingRouter.requestRoutes(requestPoints, drivingOptions, vehicleOptions, this)
+                Log.d("MyLog","ROUTE BUILT")
+            }
+            else
+                Toast.makeText(activity, "Still Loading", Toast.LENGTH_SHORT).show()
+        })
+    }
+
+    //- CLICKING AND SEARCHING
+    override fun onObjectTap(p0: GeoObjectTapEvent): Boolean
+    {
+        val selectionMetadata: GeoObjectSelectionMetadata = p0.geoObject.metadataContainer.
+        getItem(GeoObjectSelectionMetadata::class.java)
+        mapView.map.selectGeoObject(selectionMetadata.id, selectionMetadata.layerId)
+        Log.d("MyLog","Tapped Location Id: ${selectionMetadata.id}\n" +
+                "Tapped Location Layer Id: ${selectionMetadata.id}")
+        return true
+    }
+
+    override fun onMapTap(p0: Map,p1: Point)
+    {
+        mapView.map.deselectGeoObject()
+        sheetHolder.visibility = View.GONE
+    }
+
+    override fun onMapLongTap(p0: Map,p1: Point)
+    {
+
+    }
+
+    override fun onSearchResponse(p0: Response)
+    {
+        mapObjects.clear()
+        for(searchResult in p0.collection.children)
+        {
+            val resultPoint: Point? = searchResult.obj?.geometry?.get(0)?.point
+            if(resultPoint != null)
+            {
+                mapObjects.addPlacemark(resultPoint, ImageProvider.fromResource(activity, R.drawable.ic_search_result))
+            }
+        }
+    }
+
+    override fun onSearchError(p0: Error)
+    {
+        var errorMessage: String = getString(R.string.unknown_error_message)
+        if(p0 is RemoteError)
+        {
+            errorMessage = getString(R.string.remote_error_message)
+        }
+        else if(p0 is NetworkError)
+        {
+            errorMessage = getString(R.string.network_error_message)
+        }
+        Toast.makeText(activity, errorMessage, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun submitQuery(query: String)
+    {
+        searchSession = searchManager.submit(query, VisibleRegionUtils.toPolygon(mapView.map.visibleRegion),
+        SearchOptions(), this)
+    }
+
+
+    //adding clustered points
+    override fun onClusterAdded(p0: Cluster)
+    {
+        Log.d("MyLog","Cluster Added")
+        p0.appearance.setIcon(TextImageProvider((p0.size).toString(), requireContext()))
+        p0.addClusterTapListener(this)
+    }
+
+
+    override fun onClusterTap(p0: Cluster): Boolean
+    {
+        Toast.makeText(
+            activity,
+            "Cluster Tapped + Cluster Size: ${p0.size}",Toast.LENGTH_SHORT).show()
+        return true
+    }
+
+    private fun createPoints(count: Int): List<Point>
+    {
+        val points: ArrayList<Point> = ArrayList()
+        val random = Random
+        for(i in 0 until count)
+        {
+            val clusterCenter: Point = clusters[random.nextInt(clusters.size)]
+            val latitude: Double = clusterCenter.latitude
+            val longitude: Double = clusterCenter.longitude
+
+            points.add(Point(latitude, longitude))
+        }
+        return points
+    }
+
+    class TextImageProvider(private val text: String, private val context: Context): ImageProvider()
+    {
+        override fun getId(): String
+        {
+            return "text_$text"
+        }
+
+        override fun getImage(): Bitmap
+        {
+            val FONT_SIZE: Float = 18f
+            val MARGIN_SIZE: Float = 12f
+            val STROKE_SIZE: Float = 4f
+            val metrics = DisplayMetrics()
+            val manager: WindowManager? = context.getSystemService(WindowManager::class.java)
+            manager?.defaultDisplay?.getMetrics(metrics)
+
+            val textPaint = Paint()
+            textPaint.textSize = FONT_SIZE * metrics.density
+            textPaint.textAlign = Align.CENTER
+            textPaint.style = Paint.Style.FILL
+            textPaint.isAntiAlias = true
+
+            val widthF: Float = textPaint.measureText(text)
+            val textMetrics: Paint.FontMetrics = textPaint.fontMetrics
+            val heightF: Float = abs(textMetrics.bottom) + abs(textMetrics.top)
+            val textRadius = sqrt((widthF*widthF + heightF*heightF).toDouble()).toFloat()/2
+            val internalRadius: Float = textRadius + MARGIN_SIZE*metrics.density
+            val externalRadius: Float = internalRadius + STROKE_SIZE*metrics.density
+
+            val width = (2*externalRadius + 0.5).toInt()
+
+            val bitmap = Bitmap.createBitmap(width,width,Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+
+            val backgroundPaint = Paint()
+            backgroundPaint.isAntiAlias = true
+            backgroundPaint.color = context.getColor(R.color.primary_green)
+            canvas.drawCircle((width/2).toFloat(),(width/2).toFloat(),externalRadius,backgroundPaint)
+
+            backgroundPaint.color = Color.WHITE
+            canvas.drawCircle((width/2).toFloat(),(width/2).toFloat(),internalRadius,backgroundPaint)
+
+            canvas.drawText(text,(width/2).toFloat(),
+                width/2 - (textMetrics.ascent + textMetrics.descent)/2,
+                textPaint)
+
+            return bitmap
+        }
+    }
+
+    private fun drawBitMap(context: Context): Bitmap
+    {
+
+        val source: Bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.ic_location)
+        val bitmap: Bitmap = source.copy(Bitmap.Config.ARGB_8888, true)
+        val paint = Paint()
+        val filter: ColorFilter = PorterDuffColorFilter(context.getColor(R.color.primary_green),
+            PorterDuff.Mode.SRC_IN)
+        paint.colorFilter = filter
+        val canvas = Canvas(bitmap)
+        canvas.drawBitmap(bitmap, 0f , 0f, paint)
+        return bitmap
+    }
+
+    override fun onMapObjectTap(p0: MapObject,p1: Point): Boolean
+    {
+        Toast.makeText(
+            activity,
+            "Point Tapped",Toast.LENGTH_SHORT).show()
+        return true
+    }
+
 
 }

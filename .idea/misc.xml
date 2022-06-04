@@ -3,9 +3,10 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Programs/Android Studio Projects/Hackathon_Cambridge_V1/app/src/main/res/drawable/rounded_corners.xml" value="0.1395" />
         <entry key="..\:/Programs/Android Studio Projects/Hackathon_Cambridge_V1/app/src/main/res/layout/activity_main.xml" value="0.15940685820203893" />
         <entry key="..\:/Programs/Android Studio Projects/Hackathon_Cambridge_V1/app/src/main/res/layout/fragment_checker.xml" value="0.25416666666666665" />
-        <entry key="..\:/Programs/Android Studio Projects/Hackathon_Cambridge_V1/app/src/main/res/layout/fragment_main.xml" value="0.152" />
+        <entry key="..\:/Programs/Android Studio Projects/Hackathon_Cambridge_V1/app/src/main/res/layout/fragment_main.xml" value="0.2" />
       </map>
     </option>
   </component>

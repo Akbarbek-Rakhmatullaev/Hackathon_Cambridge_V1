@@ -15,16 +15,18 @@ import com.yandex.mapkit.location.LocationListener
 import com.yandex.mapkit.location.LocationStatus
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.mapview.MapView
+import com.yandex.mapkit.user_location.UserLocationLayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application): AndroidViewModel(application)
 {
-    private val permissionData: MutableLiveData<Boolean> = MutableLiveData<Boolean>()
-    val permissionLiveData: LiveData<Boolean> = permissionData
-    fun initialization(permissionEnabled: Boolean)
+    private val cameraPositionData: MutableLiveData<CameraPosition?> = MutableLiveData<CameraPosition?>()
+    val cameraPositionLiveData: MutableLiveData<CameraPosition?> = cameraPositionData
+    fun getCameraPosition(userLocationLayer: UserLocationLayer)
     {
-        permissionData.value = permissionEnabled
+        val cameraPosition = userLocationLayer.cameraPosition()
+        cameraPositionData.value = cameraPosition
     }
 
     fun singleUpdate(mapKit: MapKit, mapView: MapView, currentLocation: Location?)
