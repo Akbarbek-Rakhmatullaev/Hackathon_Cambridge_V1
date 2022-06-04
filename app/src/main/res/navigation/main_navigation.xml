@@ -3,8 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main_navigation"
-    app:startDestination="@id/mainFragment">
-
+    app:startDestination="@id/checkerFragment">
+    <fragment
+        android:id="@+id/checkerFragment"
+        android:name="com.example.hackathon_cambridge_v1.Presentation.Fragments.CheckerFragment"
+        android:label="CheckerFragment"
+        tools:layout="@layout/fragment_checker">
+        <action
+            android:id="@+id/action_checkerFragment_to_mainFragment"
+            app:destination="@id/mainFragment" />
+    </fragment>
     <fragment
         android:id="@+id/mainFragment"
         android:name="com.example.hackathon_cambridge_v1.Presentation.Fragments.MainFragment"

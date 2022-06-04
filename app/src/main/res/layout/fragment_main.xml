@@ -5,6 +5,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <RelativeLayout
+        android:id="@+id/main_fragment_checker_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/primary_green"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/project_name"
+            android:textSize="48sp"
+            android:textColor="@color/white"/>
+
+    </RelativeLayout>
+
+
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/main_fragment_toolbar_layout"
         android:layout_width="match_parent"
@@ -24,5 +42,18 @@
             android:id="@+id/main_fragment_mapView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
+        <Button
+            android:id="@+id/main_fragment_position_button"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true"
+            android:elevation="1dp"
+            app:icon = "@drawable/ic_navigation"
+            app:iconGravity = "textStart"
+            app:iconPadding="0dp"
+            style="@style/Theme.Cambridge_V1.RoundedButton"
+            android:layout_marginEnd="24dp"
+            android:layout_marginBottom="56dp"/>
     </RelativeLayout>
+
+
 </RelativeLayout>

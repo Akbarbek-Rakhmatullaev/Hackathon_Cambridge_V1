@@ -82,4 +82,8 @@ dependencies {
 
     //Yandex MapKit
     implementation "com.yandex.android:maps.mobile:4.1.0-full"
+
+    //Ted Permission
+    def ted_version = "3.3.0"
+    implementation "io.github.ParkSangGwon:tedpermission-normal:$ted_version"
 }
