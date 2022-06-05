@@ -9,4 +9,5 @@
 
     //Main Strings
     <string name="search">Search</string>
+    <string name="loading">Loading</string>
 </resources>

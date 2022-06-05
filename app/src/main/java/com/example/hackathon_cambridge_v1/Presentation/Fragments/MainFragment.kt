@@ -7,17 +7,16 @@ import android.os.Bundle
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.*
-import android.view.inputmethod.EditorInfo
 import android.widget.*
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
-import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.example.hackathon_cambridge_v1.BuildConfig
+import com.example.hackathon_cambridge_v1.Domain.Models.Point.ChildsItem
+import com.example.hackathon_cambridge_v1.Domain.Models.Point.FuelCategoryItem
+import com.example.hackathon_cambridge_v1.Domain.Models.Points.WebPoints
+import com.example.hackathon_cambridge_v1.Presentation.Adapters.PointCategoriesAdapter
 import com.example.hackathon_cambridge_v1.Presentation.MainViewModel
 import com.example.hackathon_cambridge_v1.R
 import com.google.android.material.appbar.AppBarLayout
@@ -35,8 +34,6 @@ import com.yandex.mapkit.map.*
 import com.yandex.mapkit.map.Map
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.mapkit.search.*
-import com.yandex.mapkit.search.search_layer.PlacemarkListener
-import com.yandex.mapkit.search.search_layer.SearchResultItem
 import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.mapkit.user_location.UserLocationObjectListener
 import com.yandex.mapkit.user_location.UserLocationView
@@ -83,12 +80,18 @@ class MainFragment: Fragment(), UserLocationObjectListener, DrivingSession.Drivi
 
     //adding clustered points
     private val MARKS_NUMBER: Int = 50
-    private val clusters: List<Point> = listOf(Point(41.311081, 69.240562),
-        Point(41.240562, 69.1),
-        Point(41.3, 69.2),
-        Point(41.2, 69.5),
-        Point(41.1, 69.7))
+    private lateinit var clusters: List<Point>
 
+    //point views
+    private lateinit var pointName: TextView
+    private lateinit var pointAddress: TextView
+    private lateinit var pointCompanyName: TextView
+    private lateinit var pointWorking: TextView
+    private lateinit var expandableListView: ExpandableListView
+    private lateinit var expandableListViewAdapter: ExpandableListAdapter
+    private lateinit var pointViewAdapter: PointCategoriesAdapter
+    private var categoryTitles: ArrayList<FuelCategoryItem?> = ArrayList()
+    private var categoryDetails: HashMap<String, ArrayList<ChildsItem>?> = HashMap()
     //adding points
     private lateinit var mapObjectTapListener: MapObjectTapListener
 
@@ -119,7 +122,7 @@ class MainFragment: Fragment(), UserLocationObjectListener, DrivingSession.Drivi
     {
         //base view and vars
         positionButton = view.findViewById(R.id.main_fragment_position_button)
-        searchEditText = view.findViewById(R.id.fragment_main_search_editText)
+        //searchEditText = view.findViewById(R.id.fragment_main_search_editText)
 //        toolbarLayout = view.findViewById(R.id.main_fragment_toolbar_layout)
 //        toolbar = view.findViewById(R.id.main_fragment_toolbar)
 //        toolbarLayout.visibility = View.GONE
@@ -199,19 +202,19 @@ class MainFragment: Fragment(), UserLocationObjectListener, DrivingSession.Drivi
         map.addInputListener(this)
         //-SEARCHING
         searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
-        searchEditText.setOnEditorActionListener(object: TextView.OnEditorActionListener
-        {
-            override fun onEditorAction(v: TextView?,actionId: Int,event: KeyEvent?): Boolean
-            {
-                if(actionId == EditorInfo.IME_ACTION_SEARCH)
-                {
-                    //submitQuery(searchEditText.text.toString())
-                    Log.d("MyLog","SEARCH IS SENT")
-                }
-                return false
-            }
-
-        })
+//        searchEditText.setOnEditorActionListener(object: TextView.OnEditorActionListener
+//        {
+//            override fun onEditorAction(v: TextView?,actionId: Int,event: KeyEvent?): Boolean
+//            {
+//                if(actionId == EditorInfo.IME_ACTION_SEARCH)
+//                {
+//                    //submitQuery(searchEditText.text.toString())
+//                    Log.d("MyLog","SEARCH IS SENT")
+//                }
+//                return false
+//            }
+//
+//        })
         //submitQuery("Novza")
         //adding clustered points
 //        val imageProvider = ImageProvider.fromResource(activity, R.drawable.ic_search_result)
@@ -224,20 +227,65 @@ class MainFragment: Fragment(), UserLocationObjectListener, DrivingSession.Drivi
         mapObjectTapListener = MapObjectTapListener { mapObject, point ->
             Log.d("MyLog","Map Object: ${mapObject.userData}")
             BottomSheetBehavior.from(sheet).apply {
-                peekHeight = 200
+                peekHeight = 300
                 this.state = BottomSheetBehavior.STATE_HALF_EXPANDED
             }
             sheetHolder.visibility = View.VISIBLE
+            mainViewModel.getPoint(mapObject.userData as String)
             true }
 
-        for(i in clusters.indices)
-        {
-            val placemark: PlacemarkMapObject = mapObjects.addPlacemark(clusters[i],
-                ImageProvider.fromBitmap(drawBitMap(requireContext())))
-            placemark.apply {
-                userData = "123"
-                addTapListener(mapObjectTapListener) }
-        }
+        mainViewModel.pointsLiveData.observe(viewLifecycleOwner, Observer {
+            val webPoints: WebPoints? = it
+            if(webPoints != null)
+            {
+                val pointsSize: Int? = webPoints.count
+                for (i in 0 until pointsSize!!)
+                {
+                    val latitude = webPoints.items?.get(i)?.coords?.latitude
+                    val longitude = webPoints.items?.get(i)?.coords?.longitude
+                    val point: Point = Point(latitude!!, longitude!!)
+                    val placemark: PlacemarkMapObject = mapObjects.addPlacemark(point,
+                        ImageProvider.fromBitmap(drawBitMap(requireContext())))
+                    placemark.apply {
+                        userData = webPoints.items[i]?.id
+                        addTapListener(mapObjectTapListener)
+                    }
+                }
+            }
+        })
+        pointName = view.findViewById(R.id.main_fragment_point_name_textView)
+        pointAddress = view.findViewById(R.id.main_fragment_point_address_textView)
+        pointCompanyName = view.findViewById(R.id.main_fragment_point_company_name_textView)
+        pointWorking = view.findViewById(R.id.main_fragment_point_working_textView)
+
+        expandableListView = view.findViewById(R.id.main_fragment_point_categories_listView)
+
+        mainViewModel.pointLiveData.observe(viewLifecycleOwner, Observer {
+            if(it != null)
+            {
+                pointName.text = it.name
+                pointAddress.text = it.address
+                pointCompanyName.text = it.companyName
+                pointWorking.text = "Is Working: " + it.isWorking.toString()
+                if(it.fuelSelection != null)
+                {
+                    for (i in 0 until it.fuelSelection.size)
+                    {
+                        categoryTitles.add(it.fuelSelection[i]!!)
+                        val details: ArrayList<ChildsItem> = ArrayList()
+                        for (j in 0 until it.fuelSelection[i]?.childs?.size!!)
+                        {
+                            details.add(it.fuelSelection[i]?.childs!![j]!!)
+                        }
+                        categoryDetails.put(it.fuelSelection[i]?.id.toString(), details)
+                    }
+                }
+
+                pointViewAdapter = PointCategoriesAdapter(requireContext(), categoryTitles, categoryDetails)
+
+                expandableListView.setAdapter(pointViewAdapter)
+            }
+        })
     }
 
     //base view and vars
@@ -484,6 +532,4 @@ class MainFragment: Fragment(), UserLocationObjectListener, DrivingSession.Drivi
             "Point Tapped",Toast.LENGTH_SHORT).show()
         return true
     }
-
-
 }

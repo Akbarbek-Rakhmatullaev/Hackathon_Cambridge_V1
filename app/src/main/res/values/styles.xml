@@ -17,4 +17,9 @@
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">30%</item>
     </style>
+
+    <style name="Theme.Cambridge_V1.RoundedView">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">30%</item>
+    </style>
 </resources>
